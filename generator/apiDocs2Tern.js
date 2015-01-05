@@ -5,6 +5,11 @@
 })(this,function(exports) {
   "use strict";
   
+  // https://github.com/angular/protractor/blob/master/lib/element.js#L6
+  var WEB_ELEMENT_FUNCTIONS = ['click', 'sendKeys', 'getTagName', 'getCssValue', 'getAttribute', 'getText',
+                               'getSize', 'getLocation', 'isEnabled', 'isSelected', 'submit', 'clear',
+                               'isDisplayed', 'getOuterHtml', 'getInnerHtml', 'getId'];
+  
   var Generator = exports.Generator = function(options) {
     this.options = options;
   };
@@ -28,7 +33,25 @@
   
   Generator.prototype.visitItem = function(apiItem, apiDoc, ternDef) {
 	var protractorType = apiItem.name;
-	var ternClass = getTernClass(protractorType, ternDef["!define"]), ternClassToUpdate = ternClass;
+	var parent = ternDef["!define"];
+	
+	// !proto
+	if (protractorType.indexOf('ProtractorBy.prototype') != -1) {
+		getTernClass('ProtractorBy.prototype', parent)["!proto"] = "WebdriverBy.prototype";
+	} else if (protractorType.indexOf('WebdriverBy.prototype') != -1) {
+		getTernClass('WebdriverBy.prototype', parent)["!proto"] = "webdriver.By";
+	} else if (protractorType.indexOf('Protractor.prototype') != -1) {
+		getTernClass('Protractor.prototype', parent)["!proto"] = "webdriver.WebDriver.prototype";
+	}
+	
+	// Copy WebElements functions
+	if (protractorType.indexOf('ElementArrayFinder.prototype') != -1) {
+		copyWebElementFunctions('ElementArrayFinder.prototype', parent);
+	} else if (protractorType.indexOf('ElementFinder.prototype') != -1) {
+		copyWebElementFunctions('ElementFinder.prototype', parent);
+	}
+	
+	var ternClass = getTernClass(protractorType, parent), ternClassToUpdate = ternClass;
 	var alias = apiItem.alias;
     if (alias && protractorType.indexOf('.prototype') == -1) {
       var names = alias.split('.'), parent = ternDef;
@@ -79,6 +102,17 @@
     } 
 	if (apiItem.description) ternClassToUpdate["!doc"] =  apiItem.description;
 	ternClassToUpdate["!url"] = "http://angular.github.io/protractor/#/api?view=" + protractorType;	
+	
+  }
+  
+  var copyWebElementFunctions = function(proto, parent) {
+	var ternClass = getTernClass(proto, parent);
+	for (var i = 0; i < WEB_ELEMENT_FUNCTIONS.length; i++) {
+		var fnName = WEB_ELEMENT_FUNCTIONS[i], type = "webdriver.WebElement.prototype." + fnName;
+		ternClass[fnName] = {
+		  "!type" : type		
+		};	
+	}
   }
   
   var getTernClass = function(className, parent) {
