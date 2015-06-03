@@ -5,6 +5,7 @@ exports['test browser completion'] = function() {
     "start":{"line":0,"ch":0},
 	"end":{"line":0,"ch":2},
 	"isProperty":false,
+	"isObjectKey":false,
 	"completions":[{"name":"browser","type":"Protractor","origin":"protractor"}]
   });
 }
